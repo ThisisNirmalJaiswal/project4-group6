@@ -15,7 +15,9 @@ const shorternUrl = async function (req, res) {
     if (Object.keys(data).length == 0) {
       return res.status(400).send({status: false, message: "Invalid Url please provide valid details",});
     }
-    if(!data.)
+    if(!data.urlCode){
+        return res.status(400).send({ status:false, message:"provide urlcode pls"})
+    }
     if (!isValid(data.longUrl)) {
       return res.status(400).send({ status: false, message: "Please give the long URL" });
     }
