@@ -72,4 +72,27 @@ const createUrl = async function (req, res) {
 
 }
 
+const getUrl = async function (req,res){
+try{
+const shortCode = req.params.urlCode
+
+if (!shortCode) return res.status(400).send({status: false, msg : "please provide shortlink"})
+
+let shortModel = await urlmodel.findOne({urlCode:shortCode}).select({longUrl:1})
+
+if(!shortModel)
+return res.status(400).send({status : false,msg:"link not found"})
+
+return res.redirect(shortModel)
+
+} catch(error) {
+    return res.status(500).send({status:false,msg:error.message})
+  
+}
+}
+module.exports.getUrl = getUrl;
+
+
+
+
 module.exports.createUrl=createUrl;
