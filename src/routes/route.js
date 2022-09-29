@@ -5,7 +5,7 @@ const urlController = require("../controller/urlController");
 
 //============================create URl shorten api=================
 
-router.post("/url/shorten", urlController.urlShorten);
+router.post("/url/shorten", urlController.createUrl);
 
 
 //========================get url api=============================
