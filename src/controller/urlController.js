@@ -105,15 +105,15 @@ const getUrl = async function (req, res) {
       if(!shortid.isValid(urlCode)){
           return res.status(400).send({status: false, message: "Url Code is not a valid urlCode. Please provide correct input"})
       }
-      let cachedURLCode = await GET_ASYNC(urlCode)
-      if(cachedURLCode){
-          return res.status(302).redirect(cachedURLCode)
+      let cachedUrlCode = await GET_ASYNC(`${req.params.urlCode}`)
+      if(cachedUrlCode){
+          return res.status(302).redirect(cachedUrlCode)
       } else{
           const cachedData = await urlModel.findOne({urlCode : urlCode})
           if(!cachedData){
               return res.status(404).send({status: false, message: "URL Not Found"})
           }
-          await SET_ASYNC(cachedData.longUrl)
+          await SET_ASYNC(`${req.params.urlCode}`, JSON.stringify(urlCode))
           return res.status(302).redirect(urlCode,cachedData.longUrl)
       }
 
