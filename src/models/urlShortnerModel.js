@@ -17,11 +17,9 @@ const urlSchema = new mongoose.Schema({
         required: true,
         unique: true,
     }
-})
+},{timestamps:true});
 
 module.exports = mongoose.model('URL', urlSchema)
 
 
   //  { urlCode: { mandatory, unique, lowercase, trim }, longUrl: {mandatory, valid url}, shortUrl: {mandatory, unique} }
-
-//
