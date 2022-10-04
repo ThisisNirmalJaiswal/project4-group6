@@ -19,9 +19,7 @@ redisClient.on("connect", async function () {
   console.log("Connected to Redis..");
 });
 
-
 //==============================promisify============================
-
 
 const SET_ASYNC = promisify(redisClient.SET).bind(redisClient);
 const GET_ASYNC = promisify(redisClient.GET).bind(redisClient);
@@ -33,95 +31,111 @@ const isValid = function (value) {
 };
 
 
-//==========================================creating url==========================
+
+// //==========================================creating url==========================
 
 
 
 const createUrl = async function (req, res) {
   try {
-   
-    let {longUrl} = req.body;
+    let { longUrl } = req.body;
 
     if (!Object.keys(req.body).length > 0) {
-        return res
-          .status(400)
-          .send({ status: false, message: "Please provide some data in body" });
-      }
-
-  
-    if(req.body.urlCode||req.body.shortUrl){
-        return res.status(400).send({status:false, messsage:"you have to enter only longUrl"});
-    }
-
-
-    if (!isValid(longUrl)) {
       return res
         .status(400)
-        .send({ status: false, message: "longUrl is required" });
+        .send({
+          status: false,
+          message: "Please enter recommended data in body",
+        });
     }
 
+    if (req.body.urlCode || req.body.shortUrl) {
+      return res
+        .status(400)
+        .send({ status: false, messsage: "you have to enter only longUrl" });
+    }
 
-    if (!validUrl.isUri(longUrl)) {
+    if (!isValid(longUrl)) {
+      return res.status(400).send({ status: false, message: "longUrl is required" });
+    }
+
+    if (!validUrl.isWebUri(longUrl)) {
       return res.status(400).send({ status: false, message: "invalid url" });
     }
-    let findurl = await urlModel.findOne({ longUrl: longUrl }).select({ longUrl: 1, shortUrl: 1, urlCode: 1,_id:0});
+    if(!(/(^|\s)((https?:\/\/)?[\w-]+(\.[\w-]+)+\.?(:\d+)?(\/\S*)?)/.test(longUrl))){
+      return res.status(400).send({ status: false, message: "please Enter valid longUrl" })
+  }
 
 
-    if (findurl) {
-      return res
-        .status(200)
-        .send({ status: true, message: "url already present", data: findurl });
+    let cache = await GET_ASYNC(`${longUrl}`);
+    if (cache) {
+      cache = JSON.parse(cache);
+      
+      return res.status(400).send({ status: false, message: "Data from Cache", data: cache });
+
     }
 
+    let checkExistUrl = await urlModel.findOne({ longUrl: longUrl }).select({ longUrl: 1, shortUrl: 1, urlCode: 1, _id: 0 });
 
-    const urlCode = shortid.generate().toLocaleLowerCase();
+    if (checkExistUrl) {
+      await SET_ASYNC(`${longUrl}`,JSON.stringify(checkExistUrl),"EX",60);
 
+      return res.status(400).send({status: true, message: "url already present",data: checkExistUrl});
+    }
 
+    const urlCode = shortid.generate().toLowerCase();
 
-    const urlData = {
+    const baseUrl = "http://localhost:3000";
+
+    const obj = {
       longUrl: longUrl,
+      shortUrl: baseUrl + "/" + urlCode,
       urlCode: urlCode,
-      shortUrl: "http://localhost:3000" + "/" + urlCode,
     };
-
-    // const 
-
-    const createData = await (await urlModel.create(urlData)).select({ _id:0, __v:0, createdAt:0, updatedAt:0})
-
-    return res.status(201).send({ status: true, data: createData });
-
-  } catch (error) {
-    return res.status(500).send({ status: false, error: error.message });
+    const createUrl = await urlModel.create(obj);
+    return res
+      .status(201)
+      .send({ status: true, message: "shortUrl created", data: obj });
+  } catch (err) {
+    res
+      .status(500)
+      .send({ status: false, message: "server error", error: err.message });
   }
 };
 
+const geturl = async function (req, res) {
+  try {
+    let urlCode = req.params.urlCode;
 
-//=====================getting url=======================================
-
-const getUrl = async function (req, res) {
-  try{
-      const urlCode = req.params.urlCode
-
-      if(!shortid.isValid(urlCode)){
-          return res.status(400).send({status: false, message: "Url Code is not a valid urlCode. Please provide correct input"})
-      }
-      let cachedUrlCode = await GET_ASYNC(`${req.params.urlCode}`)
-      if(cachedUrlCode){
-          return res.status(302).redirect(cachedUrlCode)
-      } else{
-          const cachedData = await urlModel.findOne({urlCode : urlCode})
-          if(!cachedData){
-              return res.status(404).send({status: false, message: "URL Not Found"})
-          }
-          await SET_ASYNC(`${req.params.urlCode}`, JSON.stringify(urlCode))
-          return res.status(302).redirect(urlCode,cachedData.longUrl)
-      }
-
-  } catch(err){
-      return res.status(500).send({ status: false, Error: err.message})
+    if(/.*[A-Z].*/.test(urlCode)){
+      return res.status(400).send({ status: false, message: "please Enter urlCode only in lowercase" })
   }
 
-}
+    const checkUrlCode = await urlModel.findOne({ urlCode: urlCode });
+    if (!checkUrlCode)
+      return res.status(404).send({ status: false, message: "urlcode not found" });
 
+    let cachedata = await GET_ASYNC(`${urlCode}`);
 
-module.exports = {createUrl, getUrl}
+    cachedata = JSON.parse(cachedata);
+
+    if (cachedata) {
+
+      res.redirect(cachedata.longUrl);
+
+    } else {
+
+      let orignalUrl = await urlModel.findOne({ urlCode: urlCode }).select({ _id: 0, longUrl: 1 });
+
+      await SET_ASYNC(`${urlCode}`, JSON.stringify(orignalUrl), "EX", 60);
+
+      return res.status(302).redirect(orignalUrl.longUrl);
+    }
+  } catch (err) {
+
+    return res.status(500).send({ status: false, message: "server error", error: err.message });
+
+  }
+};
+
+module.exports = { createUrl, geturl };

@@ -10,7 +10,7 @@ router.post("/url/shorten", urlController.createUrl);
 
 //========================get url api=============================
 
-router.get("/:urlCode", urlController.getUrl);
+router.get("/:urlCode", urlController.geturl);
 
 
 
