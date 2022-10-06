@@ -16,7 +16,6 @@ mongoose.connect("mongodb+srv://nirmaljasval:8o1g7W6bqoshvXoN@cluster0.cv9nolo.m
 app.use("/", route)
 
 
-app.use("/", route)
 
 app.listen(process.env.PORT || 3000, function () {
     console.log('Express app running on port ' + (process.env.PORT || 3000))
