@@ -2,7 +2,6 @@ const urlModel = require("../models/urlShortnerModel");
 const shortid = require("shortid");
 const redis = require("redis");
 const Axios = require('axios'); 
-
 const { promisify } = require("util");
 
 
@@ -67,11 +66,12 @@ const createUrl = async function (req, res) {
     };
 
 
-    let a = /^www\.[a-z0-9-]+(?:\.[a-z0-9-]+)*\.+(\w)*/
+    let url = /^www\.[a-z0-9-]+(?:\.[a-z0-9-]+)*\.+(\w)*/
 
-    if(a.test(longUrl)){
+    if(url.test(longUrl)){
       longUrl="http://"+longUrl
     }
+
 
     let option = {
       method: "get",
